@@ -1,19 +1,37 @@
-<img align="right" width="40%" src="https://www.finos.org/hubfs/FINOS/finos-logo/FINOS_Icon_Wordmark_Name_RGB_horizontal.png">
+[![FINOS - Incubating](https://cdn.jsdelivr.net/gh/finos/contrib-toolbox@master/images/badge-incubating.svg)](https://finosfoundation.atlassian.net/wiki/display/FINOS/Incubating)
 
-# FINOS Software Project Blueprint
+# Symphony WDK Gallery
 
-Project blueprint is a GitHub repository template for all [Fintech Open Source Foundation (FINOS)](https://www.finos.org/) hosted GitHub repositories, contributed and maintained by FINOS as part of the [Open Developer Platform (ODP)](https://odp.finos.org) initiative.
+The Symphony WDK Gallery is a project collecting ready-to-use workflow templates that can be used using the Symphony Workflow Developer Kit.
+Workflow templates are described using the SWADL language (https://github.com/finos/symphony-wdk/blob/master/docs/reference.md)
 
-## How to use this blueprint
+## Installation & Usage
 
-Please follow https://odp.finos.org/docs/project-collaboration/#finos-project-blueprint
+1. Select the SWADL file corresponding to a template from one category under the  categories directory.
+2. Copy the file to the workflow directory set in the application.yaml file in your WDK project.
+3. Alternatively adapt the SWADL file to fit your own need.
 
-## Governance
-This blueprint implements https://github.com/finos/community/tree/master/governance#open-source-software-projects
+## Roadmap
+
+in progress
+
+## Contributing
+
+1. Fork it (<https://github.com/finos/symphony-wdk-gallery/fork>)
+2. Create your feature branch (`git checkout -b feature/fooBar`)
+3. Read our [contribution guidelines](.github/CONTRIBUTING.md) and [Community Code of Conduct](https://www.finos.org/code-of-conduct)
+4. Commit your changes (`git commit -am 'Add some fooBar'`)
+5. Push to the branch (`git push origin feature/fooBar`)
+6. Create a new Pull Request
+
+_NOTE:_ Commits and pull requests to FINOS repositories will only be accepted from those contributors with an active, executed Individual Contributor License Agreement (ICLA) with FINOS OR who are covered under an existing and active Corporate Contribution License Agreement (CCLA) executed with FINOS. Commits from individuals not covered under an ICLA or CCLA will be flagged and blocked by the FINOS Clabot tool (or [EasyCLA](https://github.com/finos/community/blob/master/governance/Software-Projects/EasyCLA.md)). Please note that some CCLAs require individuals/employees to be explicitly named on the CCLA.
+
+*Need an ICLA? Unsure if you are covered under an existing CCLA? Email [help@finos.org](mailto:help@finos.org)*
+
 
 ## License
 
-Copyright 2019 Fintech Open Source Foundation
+Copyright {yyyy} {name of copyright owner}
 
 Distributed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
 
