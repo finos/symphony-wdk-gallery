@@ -1,0 +1,44 @@
+id: research-distribution
+
+variables:
+  approvalRoomId: approvalStreamId
+  clientRoomIds:
+    - clientAstreamId
+    - clientBstreamId
+    - clientCstreamId
+
+activities:
+- send-message:
+    id: research
+    on:
+      message-received:
+        content: /research
+    content: |
+      <h3>New Research Draft</h3>
+      <form id="research">
+        <text-field name="title" placeholder="Title" />
+        <textarea name="content"  placeholder="Research content"></textarea>
+        <button type="action" name="submit">Submit for Approval</button>
+      </form>
+
+- send-message:
+    id: approval
+    on:
+      form-replied:
+        form-id: research
+    to:
+      stream-id: ${variables.approvalRoomId}
+    content: |
+      <h3>Research Draft Approval</h3><br />
+      <h4>${research.title}</h4><br />
+      ${research.content}<br />
+      <form id="approval"><button name="approve">Approve</button></form>
+
+- send-message:
+    id: distribute
+    on:
+      form-replied:
+        form-id: approval
+    to:
+      stream-ids: ${variables.clientRoomIds}
+    content: <h4>${research.title}</h4><br />${research.content}
