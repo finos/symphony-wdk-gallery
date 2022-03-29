@@ -1,0 +1,186 @@
+id: onboarding-workflow
+variables:
+  documents: {
+    "Facility Agreements": {
+      "Facility Agreement": null,
+      "Agent Statement": null,
+    },
+    "Borrower Financials": {
+      "FY2021": null,
+      "FY2020": null,
+      "FY2019": null
+    },
+    "Borrower KYC": {
+      "Latest KYC": null
+    }
+  }
+  assignments: {}
+  assignmentQueue: []
+  documentCount: 0
+  dispatchIndex: 0
+  submissionIndex: 0
+  approvalIndex: 0
+
+activities:
+  - execute-script:
+      id: init
+      on:
+        message-received:
+          content: onboard
+      script: variables.adminStreamId = event.source.message.stream.streamId
+
+  - send-message:
+      id: assignment
+      content:
+        template: onboarding-assignment.ftl
+
+  - pin-message:
+      id: pinAssignment
+      message-id: ${assignment.outputs.msgId}
+
+  - execute-script:
+      id: prepareState
+      on:
+        form-replied:
+          form-id: assignment
+      script: |
+        variables.documents.each { key, collection -> collection.each { doc, val ->
+          assignee = assignment["person-${key}_${doc}"][0]
+          variables.documents[key][doc] = [userId: assignee]
+          if (variables.assignments[assignee] == null) variables.assignments[assignee] = []
+          variables.assignments[assignee].push("${key}_${doc}")
+          variables.documentCount++
+        }}
+        variables.assignments.each { userId, collection -> variables.assignmentQueue.push([userId: userId, collection: collection]) }
+
+  - send-message:
+      id: dispatch
+      to:
+        user-ids:
+          - ${variables.assignmentQueue[variables.dispatchIndex].userId}
+      on:
+        one-of:
+          - activity-completed:
+              activity-id: prepareState
+          - activity-completed:
+              activity-id: incrementDispatch
+              if: ${variables.dispatchIndex < variables.assignments.size()}
+      content:
+        template: onboarding-dispatch.ftl
+
+  - execute-script:
+      id: incrementDispatch
+      script: variables.dispatchIndex++
+
+  - update-message:
+      id: updateStatus
+      message-id: ${assignment.outputs.msgId}
+      content:
+        template: onboarding-submission-status.ftl
+
+  - execute-script:
+      id: submissionLoop
+      on:
+        one-of:
+          - activity-completed:
+              activity-id: updateStatus
+          - activity-completed:
+              activity-id: updateSubmissionStatus
+              if: ${variables.submissionIndex < variables.assignmentQueue.size()}
+      script: |
+        if (variables.updateMsgId)
+          variables.updateMsgId = updateSubmissionStatus.outputs.msgId
+        else
+          variables.updateMsgId = updateStatus.outputs.msgId
+
+  - execute-script:
+      id: submitDocument
+      on:
+        message-received:
+          content: /upload
+      script: |
+        userId = event.initiator.user.userId
+        variables.assignments[userId].eachWithIndex { val, index ->
+          key = val.split('_')[0]
+          doc = val.split('_')[1]
+          variables.documents[key][doc] = [
+            userId: userId,
+            messageId: event.source.message.messageId,
+            attachmentId: event.source.message.attachments[index].id
+          ]
+        }
+        variables.lastStreamId = event.source.message.stream.streamId
+        variables.submissionIndex++
+
+  - send-message:
+      id: confirmSubmisson
+      to:
+        stream-id: ${variables.lastStreamId}
+      content: Documents submitted successfully
+
+  - update-message:
+      id: updateSubmissionStatus
+      message-id: ${variables.updateMsgId}
+      content:
+        template: onboarding-submission-status.ftl
+
+  - unpin-message:
+      id: unpinApproval
+      stream-id: ${variables.adminStreamId}
+
+  - execute-script:
+      id: approvalLoop
+      on:
+        one-of:
+        - activity-completed:
+            activity-id: redactPrevious
+            if: ${variables.approvalIndex < variables.documentCount}
+      script: |
+
+  - send-message:
+      id: approval
+      to:
+        stream-id: ${variables.adminStreamId}
+      content:
+        template: onboarding-approval.ftl
+
+  - send-message:
+      id: download
+      on:
+        form-replied:
+          form-id: approval
+          exclusive: true
+      if: ${approval.action != null && approval.action.split(',')[0] == 'download'}
+      content: Document attached
+      attachments:
+        - message-id: ${approval.action.split(',')[1]}
+          attachment-id: ${approval.action.split(',')[2]}
+
+  - execute-script:
+      id: approve
+      on:
+        form-replied:
+          form-id: approval
+          exclusive: true
+      if: ${approval.action.split(',')[0] == 'approve'}
+      script: |
+        key = approval.action.split(',')[1]
+        doc = approval.action.split(',')[2]
+        variables.documents[key][doc].approved = true
+        variables.approvalIndex++
+
+  - update-message:
+      id: redactPrevious
+      on:
+        one-of:
+          - activity-completed:
+              activity-id: download
+          - activity-completed:
+              activity-id: approve
+      message-id: ${approval.outputs.msgId}
+      content:
+        template: onboarding-summary.ftl
+
+  - send-message:
+      id: complete
+      content: <span class="tempo-text-color--green"><b>Onboarding workflow complete</b></span>
