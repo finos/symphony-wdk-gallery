@@ -2,16 +2,10 @@ id: onboarding-workflow
 variables:
   documents: {
     "Facility Agreements": {
-      "Facility Agreement": null,
-      "Agent Statement": null,
+      "Facility Agreement": null
     },
     "Borrower Financials": {
-      "FY2021": null,
-      "FY2020": null,
-      "FY2019": null
-    },
-    "Borrower KYC": {
-      "Latest KYC": null
+      "FY2021": null
     }
   }
   assignments: {}
@@ -33,10 +27,6 @@ activities:
       id: assignment
       content:
         template: onboarding-assignment.ftl
-
-  - pin-message:
-      id: pinAssignment
-      message-id: ${assignment.outputs.msgId}
 
   - execute-script:
       id: prepareState
@@ -64,7 +54,6 @@ activities:
               activity-id: prepareState
           - activity-completed:
               activity-id: incrementDispatch
-              if: ${variables.dispatchIndex < variables.assignments.size()}
       content:
         template: onboarding-dispatch.ftl
 
@@ -74,6 +63,10 @@ activities:
 
   - update-message:
       id: updateStatus
+      on:
+        activity-completed:
+          activity-id: incrementDispatch
+          if: ${variables.dispatchIndex >= variables.assignments.size()}
       message-id: ${assignment.outputs.msgId}
       content:
         template: onboarding-submission-status.ftl
@@ -86,7 +79,6 @@ activities:
               activity-id: updateStatus
           - activity-completed:
               activity-id: updateSubmissionStatus
-              if: ${variables.submissionIndex < variables.assignmentQueue.size()}
       script: |
         if (variables.updateMsgId)
           variables.updateMsgId = updateSubmissionStatus.outputs.msgId
@@ -124,33 +116,34 @@ activities:
       content:
         template: onboarding-submission-status.ftl
 
-  - unpin-message:
-      id: unpinApproval
-      stream-id: ${variables.adminStreamId}
-
-  - execute-script:
-      id: approvalLoop
+  - send-message:
+      id: approval
       on:
         one-of:
         - activity-completed:
+            activity-id: updateSubmissionStatus
+            if: ${variables.submissionIndex >= variables.assignmentQueue.size()}
+        - activity-completed:
             activity-id: redactPrevious
-            if: ${variables.approvalIndex < variables.documentCount}
-      script: |
-
-  - send-message:
-      id: approval
       to:
         stream-id: ${variables.adminStreamId}
       content:
         template: onboarding-approval.ftl
 
-  - send-message:
-      id: download
+  - execute-script:
+      id: approvalAction
       on:
         form-replied:
           form-id: approval
           exclusive: true
-      if: ${approval.action != null && approval.action.split(',')[0] == 'download'}
+      script: |
+
+  - send-message:
+      id: download
+      on:
+        activity-completed:
+          activity-id: approvalAction
+      if: ${approval.action.split(',')[0] == 'download'}
       content: Document attached
       attachments:
         - message-id: ${approval.action.split(',')[1]}
@@ -159,10 +152,9 @@ activities:
   - execute-script:
       id: approve
       on:
-        form-replied:
-          form-id: approval
-          exclusive: true
-      if: ${approval.action.split(',')[0] == 'approve'}
+        activity-completed:
+          activity-id: approvalAction
+      else: {}
       script: |
         key = approval.action.split(',')[1]
         doc = approval.action.split(',')[2]
@@ -183,4 +175,8 @@ activities:
 
   - send-message:
       id: complete
+      on:
+        activity-completed:
+          activity-id: redactPrevious
+          if: ${variables.approvalIndex >= variables.documentCount}
       content: <span class="tempo-text-color--green"><b>Onboarding workflow complete</b></span>
