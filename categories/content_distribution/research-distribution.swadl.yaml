@@ -26,6 +26,7 @@ activities:
     on:
       form-replied:
         form-id: research
+        exclusive: true
     to:
       stream-id: ${variables.approvalRoomId}
     content: |
@@ -39,6 +40,7 @@ activities:
     on:
       form-replied:
         form-id: approval
+        exclusive: true
     to:
       stream-ids: ${variables.clientRoomIds}
     content: <h4>${research.title}</h4><br />${research.content}
