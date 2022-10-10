@@ -1,0 +1,64 @@
+id: support-workflow
+activities:
+  - send-message:
+      id: supportTicket
+      on:
+        message-received:
+          content: /support
+      content: |
+        <h5>Submit a Support Issue</h5>
+        <form id="supportTicket">
+          <select name="category" label="Select category">
+            <option value="mobile" selected="true">Mobile App</option>
+            <option value="network">Network</option>
+            <option value="hardware">Hardware</option>
+          </select>
+          <textarea name="description" label="Problem description"></textarea>
+          <button name="submit" type="action">Submit</button>
+        </form>
+  - execute-script:
+      id: cacheOrigin
+      script: |
+        variables.displayName = event.initiator.user.displayName
+        variables.msgId = supportTicket.outputs.msgId
+  - update-message:
+      id: updateSupportTicket
+      on:
+        form-replied:
+          form-id: supportTicket
+      message-id: ${variables.msgId}
+      content: Your support ticket has been submitted
+  - send-message:
+      id: ticketDetails
+      content: |
+        <h5>New Support Ticket Raised</h5>
+        <form id="ticketDetails">
+          <ui-action trigger="click" action="open-dialog" target-id="dialogId">
+            <button>Open Ticket Details</button>
+          </ui-action>
+          <dialog id="dialogId" width="small">
+            <title>Ticket Details</title>
+            <body>
+              User: ${variables.displayName}<br/>
+              Category: ${supportTicket.category}<br/>
+              Description: ${supportTicket.description}
+            </body>
+            <footer>
+              <button type="cancel" name="cancel">Close</button>
+            </footer>
+          </dialog>
+          <h5>Actions</h5>
+          <ui-action action='open-im' user-ids='[349026222342678]'>
+            <button>Open IM with User</button>
+          </ui-action>
+          <button type="action" name="close">Close Ticket</button>
+        </form>
+  - pin-message:
+      id: pinDetails
+      message-id: ${ticketDetails.outputs.msgId}
+  - unpin-message:
+      id: unpinDetails
+      on:
+        form-replied:
+          form-id: ticketDetails
+      stream-id: ${event.source.stream.streamId}
