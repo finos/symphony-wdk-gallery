@@ -2,7 +2,7 @@
 These are workflows intended for onboarding of new clients through a conversational interface
 
 ## Workflow List
-- [Document Collation](#onboarding)
+- [Document Collation](#onboarding-example)
 
 ## Document Collation
 This is a document collation workflow that involves people assignment, dispatching requests, document submission, document review and approval.
