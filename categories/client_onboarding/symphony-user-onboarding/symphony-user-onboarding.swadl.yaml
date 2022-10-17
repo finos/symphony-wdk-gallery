@@ -1,8 +1,27 @@
-id: symphonyUserOnboarding
+id: symphonyOnBoarding
 variables:
   userId: ""
   index: -1
   loop: ""
+  databaseAsJson:
+    "{
+      \"commonRooms\": [\"COMMON_ROOM_ID_1\", \"COMMON_ROOM_ID_2\"],
+      \"teams\": [\"DEV_SOL\", \"BFF\", \"HR\"],
+      \"roles\": [\"DEV\", \"QA\", \"MANAGER\"],
+      \"teamRelatedRooms\": {
+          \"devSol\": {
+              \"qa\": [\"DEV_SOL_QA_ROOM_ID_1\", \"DEV_SOL_QA_ROOM_ID_2\"],
+              \"dev\": [\"DEV_SOL_DEV_ROOM_ID_1\", \"DEV_SOL_DEV_ROOM_ID_2\"],
+              \"manager\": [\"DEV_SOL_MANAGER_ROOM_ID_1\", \"DEV_SOL_MANAGER_ROOM_ID_2\"]
+          },
+          \"bffb\": {
+              \"qa\": [\"BFF_QA_ROOM_ID_1\", \"BFF_QA_ROOM_ID_2\"],
+              \"dev\": [\"BFF_DEV_ROOM_ID_1\", \"BFF_DEV_ROOM_ID_2\", \"BFF_DEV_ROOM_ID_3\"],
+              \"manager\": [\"BFF_MANAGER_ROOM_ID_1\", \"BFF_MANAGER_ROOM_ID_2\"]
+          }
+      }
+    }"
+
 activities:
   - execute-script:
       id: prepareData
@@ -14,22 +33,19 @@ activities:
               activity-id: prepareLoop
               if: ${variables.loop=='restart'}
       script: |
-        databaseContent = new File('workflows/database.json').getText('UTF-8')
-        variables.databaseAsJson = wdk.json(databaseContent)
-        
         // build form's common rooms checkbox string and escape it
         variables.commonRooms = ""
-        variables.databaseAsJson.commonRooms.each { room -> variables.commonRooms += '<checkbox name="room" value="' + room + '" checked="true">' + room + '</checkbox>\n' }
+        wdk.json(variables.databaseAsJson).commonRooms.each { room -> variables.commonRooms += '<checkbox name="room" value="' + room + '" checked="true">' + room + '</checkbox>\n' }
         variables.commonRooms = wdk.escape(variables.commonRooms)
         
         // build form's team dropdown menu options and escape it
         variables.teams = ""
-        variables.databaseAsJson.teams.each { team -> variables.teams += '<option value="' + team + '">' + team + '</option>\n' }
+        wdk.json(variables.databaseAsJson).teams.each { team -> variables.teams += '<option value="' + team + '">' + team + '</option>\n' }
         variables.teams = wdk.escape(variables.teams)
         
         // build form's role dropdown menu options and escape it
         variables.roles = ""
-        variables.databaseAsJson.roles.each { role -> variables.roles += '<option value="' + role + '">' + role + '</option>\n' }
+        wdk.json(variables.databaseAsJson).roles.each { role -> variables.roles += '<option value="' + role + '">' + role + '</option>\n' }
         variables.roles = wdk.escape(variables.roles)
         
         if (variables.userId == "") {
@@ -77,7 +93,7 @@ activities:
         
         jsonFieldName = 'teamRelatedRooms.' + variables.choosenTeam + '.' + variables.choosenRole
         variables.roomsToAdd = []
-        variables.roomsToAdd = get jsonFieldName, variables.databaseAsJson
+        variables.roomsToAdd = get jsonFieldName, wdk.json(variables.databaseAsJson)
         
         // add common rooms
         variables.choosenCommonRooms.each { room -> variables.roomsToAdd.add(room) }
