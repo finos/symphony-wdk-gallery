@@ -5,8 +5,8 @@ This is only an example and not a production ready workflow as it uses a variabl
 
 [Link to SWADL](symphony-user-onboarding.swadl.yaml)
 
-###Requirements:
+### Requirements:
 - Update the variable `databaseAsJson` with your own team sets, roles and room ids.
 
-###Run:
+### Run:
 `/onboard @USER_TO_ADD`
