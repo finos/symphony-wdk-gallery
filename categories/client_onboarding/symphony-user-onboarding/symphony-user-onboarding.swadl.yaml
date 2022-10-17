@@ -1,0 +1,129 @@
+id: symphonyUserOnboarding
+variables:
+  userId: ""
+  index: -1
+  loop: ""
+activities:
+  - execute-script:
+      id: prepareData
+      on:
+        one-of:
+          - message-received:
+              content: /onboard @{user}
+          - activity-completed:
+              activity-id: prepareLoop
+              if: ${variables.loop=='restart'}
+      script: |
+        databaseContent = new File('workflows/database.json').getText('UTF-8')
+        variables.databaseAsJson = wdk.json(databaseContent)
+        
+        // build form's common rooms checkbox string and escape it
+        variables.commonRooms = ""
+        variables.databaseAsJson.commonRooms.each { room -> variables.commonRooms += '<checkbox name="room" value="' + room + '" checked="true">' + room + '</checkbox>\n' }
+        variables.commonRooms = wdk.escape(variables.commonRooms)
+        
+        // build form's team dropdown menu options and escape it
+        variables.teams = ""
+        variables.databaseAsJson.teams.each { team -> variables.teams += '<option value="' + team + '">' + team + '</option>\n' }
+        variables.teams = wdk.escape(variables.teams)
+        
+        // build form's role dropdown menu options and escape it
+        variables.roles = ""
+        variables.databaseAsJson.roles.each { role -> variables.roles += '<option value="' + role + '">' + role + '</option>\n' }
+        variables.roles = wdk.escape(variables.roles)
+        
+        if (variables.userId == "") {
+            variables.userId = wdk.mentions(event)[0]
+        }
+
+  - send-message:
+      id: sendForm
+      content: |
+        <messageML>
+          <form id="sendForm">
+            <h2>Choose Symphony common rooms where to add user</h2>
+            ${variables.commonRooms}
+            <br/>
+            <h2>Choose team</h2>
+            <select name="team" data-placeholder="Select the team">
+              ${variables.teams}
+            </select>
+            <br/>
+            <h2>Choose role</h2>
+            <select name="role" data-placeholder="Select the role">
+              ${variables.roles}
+            </select>
+            <button name="next-button" type="action">Next</button>
+          </form>
+        </messageML>
+
+  - execute-script:
+      id: prepareFormResponse
+      on:
+        form-replied:
+          form-id: sendForm
+          exclusive: true
+      script: |
+        variables.choosenCommonRooms = event.source.formValues.room
+        variables.choosenTeam = event.source.formValues.team
+        variables.choosenRole = event.source.formValues.role
+
+  - execute-script:
+      id: prepareRoomIds
+      script: |
+        get = { field, json ->
+            field.tokenize(".").inject(json) { map, f -> map[f] }
+        }
+        
+        jsonFieldName = 'teamRelatedRooms.' + variables.choosenTeam + '.' + variables.choosenRole
+        variables.roomsToAdd = []
+        variables.roomsToAdd = get jsonFieldName, variables.databaseAsJson
+        
+        // add common rooms
+        variables.choosenCommonRooms.each { room -> variables.roomsToAdd.add(room) }
+
+  - send-message:
+      id: sendConfirmation
+      content: |
+        <messageML>
+          <form id="sendConfirmation">
+            <b>User:</b> ${variables.userId}<br/>
+            <b>Team:</b> ${variables.choosenTeam}<br/>
+            <b>Roles:</b> ${variables.choosenRole}<br/>
+            Rooms to join: ${variables.roomsToAdd}<br/>
+            <br/>
+            <button name="accept" type="action">Proceed</button>
+            <button name="restart" type="action">Restart</button>
+            <button name="cancel" type="action">Cancel</button>
+          </form>
+        </messageML>
+
+  - execute-script:
+      id: prepareLoop
+      on:
+        form-replied:
+          form-id: sendConfirmation
+      script: |
+        variables.loop = sendConfirmation.action
+
+  - execute-script:
+      id: loop
+      on:
+        one-of:
+          - activity-completed:
+              activity-id: prepareLoop
+          - activity-completed:
+              activity-id: addToRoom
+      if: ${variables.loop=='accept'}
+      script: |
+        variables.index ++
+
+  - add-room-member:
+      id: addToRoom
+      on:
+        activity-completed:
+          activity-id: loop
+          if: ${variables.index < variables.roomsToAdd.size()}
+      user-ids:
+        - ${variables.userId}
+      stream-id: ${variables.roomsToAdd[variables.index]}
