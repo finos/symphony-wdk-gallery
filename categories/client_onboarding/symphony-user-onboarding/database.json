@@ -1,0 +1,17 @@
+{
+    "commonRooms": ["COMMON_ROOM_ID_1", "COMMON_ROOM_ID_2"],
+    "teams": ["DEV_SOL", "BFF", "HR"],
+    "roles": ["dev", "qa", "manager"],
+    "teamRelatedRooms": {
+        "DEV_SOL": {
+            "qa": ["DEV_SOL_QA_ROOM_ID_1", "DEV_SOL_QA_ROOM_ID_2"],
+            "dev": ["DEV_SOL_DEV_ROOM_ID_1", "DEV_SOL_DEV_ROOM_ID_2"],
+            "manager": ["DEV_SOL_MANAGER_ROOM_ID_1", "DEV_SOL_MANAGER_ROOM_ID_2"]
+        },
+        "BFF": {
+            "qa": ["BFF_QA_ROOM_ID_1", "BFF_QA_ROOM_ID_2"],
+            "dev": ["BFF_DEV_ROOM_ID_1", "BFF_DEV_ROOM_ID_2", "BFF_DEV_ROOM_ID_3"],
+            "manager": ["BFF_MANAGER_ROOM_ID_1", "BFF_MANAGER_ROOM_ID_2"]
+        }
+    }
+}
