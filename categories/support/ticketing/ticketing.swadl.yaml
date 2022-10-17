@@ -1,4 +1,4 @@
-id: support-workflow
+id: ticketing
 activities:
   - send-message:
       id: supportTicket

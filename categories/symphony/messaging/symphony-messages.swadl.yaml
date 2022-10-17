@@ -1,0 +1,17 @@
+id: symphony-messages
+activities:
+  - send-message:
+      id: sendMessage
+      on:
+        message-received:
+          content: /msg-send
+      content: "Hi, this an example message"
+  - send-message:
+      id: pinMessage
+      on:
+        message-received:
+          content: /msg-pin
+      content: "Hi, lets pin this message"
+  - pin-message:
+      id: pinMessage
+      message-id: ${pinMessage.outputs.msgId}
