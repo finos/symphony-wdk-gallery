@@ -1,0 +1,194 @@
+id: documentation-request
+
+variables:
+  symDev: false
+  symRestAPI: false
+  symDesktop: false
+  symAdmin: false
+  onPremInstall: false
+  symRTC: false
+  symConnect: false
+  symTeams: false
+
+activities:
+  - send-message:
+      id: listDocTopic
+      on:
+        message-received:
+          content: /start
+      content: |
+        <form id="listDocTopic">
+        	<h1>Symphony Documentation Request Workflow Bot</h1>
+        	<br/>
+        	<h5>Please select a Symphony Documentation topic that you wish to request.</h5>
+        	<br/>
+        	<radio name="docTopic" value="symDev">Symphony Developers Documentation</radio>
+            <radio name="docTopic" value="symRestAPI">Symphony REST API Documentation</radio>
+            <radio name="docTopic" value="symDesktop">Symphony Desktop Client Documentation</radio>
+            <radio name="docTopic" value="symAdmin">Symphony Admin Guide</radio>
+            <radio name="docTopic" value="onPremInstall">Symphony On-Premise Installation Guide</radio>
+            <radio name="docTopic" value="symRTC">Symphony RTC Guide</radio>
+            <radio name="docTopic" value="symConnect">Symphony Connection Suite Admin Guide</radio>
+            <radio name="docTopic" value="symTeams">Symphony Teams Meeting Guide</radio>
+            <br/>
+            <button name="submit" type="action">Submit</button>
+            <button type="reset">Reset Data</button>
+        	</form>
+
+  - execute-script:
+      id: docTopicReply
+      on:
+        form-replied:
+          form-id: listDocTopic
+      script: |
+        switch (event.source.formValues.docTopic) {
+            case 'symDev':
+                variables.symDev = true
+                variables.content = 'Please visit the Symphony Developer Documentation site here: <a href="https://docs.developers.symphony.com"></a>'
+                break
+            case 'symRestAPI':
+                variables.symRestAPI = true
+                variables.content = 'Please visit the Symphony REST API Documentation site here: <a href="https://developers.symphony.com/restapi"></a>'
+                break
+            case 'symDesktop':
+                variables.symDesktop = true
+                variables.content = 'You have selected Symphony Desktop Client Documentation'
+                break
+            case 'symAdmin':
+                variables.symAdmin = true
+                variables.content = 'Please click here to download the Symphony Admin Guide here: <a href="https://docs.developers.symphony.com">Symphony Admin Guide</a>'
+                break
+            case 'onPremInstall':
+                variables.onPremInstall = true
+                variables.content = 'You have selected Symphony On-Premise Installation Guide'
+                break
+            case 'symRTC':
+                variables.symRTC = true
+                variables.content = 'You have selected Symphony Symphony RTC Guide'
+                break
+            case 'symConnect':
+                variables.symConnect = true
+                variables.content = 'Please click here to download the Symphony Connection Suite Admin Guide here: <a href="https://docs.developers.symphony.com">Symphony Connection Suite Admin Guide</a>'
+                break
+            case 'symTeams':
+                variables.symTeams = true
+                variables.content = 'Please click here to download the Symphony Teams Meeting Guide here: <a href="https://developers.symphony.com/restapi">Symphony Teams Meeting Guide</a>'
+                break
+            default:
+                variables.content = ''
+        }
+
+  - send-message:
+      id: sendDocTopicReply
+      content: ${escape(variables.content)}
+
+  - send-message:
+      id: listSymDesktopTopic
+      if: ${variables.symDesktop}
+      content: |
+        <form id="listSymDesktopTopic">
+        <h5>Please select an option below to proceed.</h5>
+        <br/>
+        <radio name="symDesktopTopic" value="symDesktopClient">Symphony Desktop Client Installation Guide</radio>
+        <radio name="symDesktopTopic" value="symDesktopClientGuide">Symphony Desktop Client Guide</radio>
+        <br/>
+        <button name="submit" type="action">Submit</button>
+        <button type="reset">Reset Data</button>
+        </form>
+
+  - execute-script:
+      id: symDesktopClientReply
+      on:
+        form-replied:
+          form-id: listSymDesktopTopic
+      script: |
+        if (event.source.formValues.symDesktopTopic == 'symDesktopClient') {
+            variables.content = 'Please click here to download the Symphony Desktop Client Installation Guide: <a href="https://docs.developers.symphony.com">Symphony Desktop Client Installation Guide</a>'
+        } else if (event.source.formValues.symDesktopTopic == 'symDesktopClientGuide') {
+            variables.content = 'Please click here to download the Symphony Desktop Client Guide: <a href="https://docs.developers.symphony.com">Symphony Desktop Client Guide</a>'
+        }
+
+  - send-message:
+      id: sendSymDesktopClientReply
+      content: ${escape(variables.content)}
+
+  - send-message:
+      id: listOnPremInstallTopic
+      on:
+        activity-completed:
+          activity-id: sendDocTopicReply
+      if: ${variables.onPremInstall}
+      content: |
+        <form id="listOnPremInstallTopic">
+        <h5>Please select an option below to proceed.</h5>
+        <br/>
+        <radio name="onPremInstallTopic" value="symAgentAPI">Symphony Agent API - On-Premise Installation Guide</radio>
+        <radio name="onPremInstallTopic" value="symKeyManager">Symphony Key Manager - On-Premise Installation Guide</radio>
+        <radio name="onPremInstallTopic" value="symContentExportBridge">Symphony Content Export Bridge - On-Premise Installation Guide</radio>
+        <radio name="onPremInstallTopic" value="symDirectoryBridge">Symphony Directory Bridge - On-Premise Installation Guide</radio>
+        <radio name="onPremInstallTopic" value="symSymProxy">Symphony SymProxy - On-Premise Installation Guide</radio>
+        <br/>
+        <button name="submit" type="action">Submit</button>
+        <button type="reset">Reset Data</button>
+        </form>
+
+  - execute-script:
+      id: symOnPremInstallReply
+      on:
+        form-replied:
+          form-id: listOnPremInstallTopic
+      script: |
+        switch (event.source.formValues.onPremInstallTopic) {
+            case 'symAgentAPI':
+                variables.content = 'Please click here to download the Symphony Agent API - On-Premise Installation Guide: <a href="https://docs.developers.symphony.com">Symphony Agent API - On-Premise Installation Guide</a>'
+                break
+            case 'symKeyManager':
+                variables.content = 'Please click here to download the Symphony Key Manager - On-Premise Installation Guide: <a href="https://docs.developers.symphony.com">Symphony Key Manager - On-Premise Installation Guide</a>'
+                break
+            case 'symContentExportBridge':
+                variables.content = 'Please click here to download the Symphony Content Export Bridge - On-Premise Installation Guide: <a href="https://docs.developers.symphony.com">Symphony Content Export Bridge - On-Premise Installation Guide</a>'
+                break
+            case 'symDirectoryBridge':
+                variables.content = 'Please click here to download the Symphony Directory Bridge - On-Premise Installation Guide: <a href="https://docs.developers.symphony.com">Symphony Directory Bridge - On-Premise Installation Guide</a>'
+                break
+            case 'symSymProxy':
+                variables.content = 'Please click here to download the Symphony SymProxy - On-Premise Installation Guide: <a href="https://docs.developers.symphony.com">Symphony SymProxy - On-Premise Installation Guide</a>'
+                break
+        }
+
+  - send-message:
+      id: sendOnPremInstallReply
+      content: ${escape(variables.content)}
+
+  - send-message:
+      id: listSymRTCTopic
+      on:
+        activity-completed:
+          activity-id: sendDocTopicReply
+      if: ${variables.symRTC}
+      content: |
+        <form id="listSymRTCTopic">
+        <h5>Please select an option below to proceed.</h5>
+        <br/>
+        <radio name="symRTCTopic" value="symRTCInstall">Symphony RTC Product Installation Guide</radio>
+        <radio name="symRTCTopic" value="symCloudRecording">Symphony Cloud Compliance Recording Installation Guide</radio>
+        <br/>
+        <button name="submit" type="action">Submit</button>
+        <button type="reset">Reset Data</button>
+        </form>
+
+  - execute-script:
+      id: symSymRTCReply
+      on:
+        form-replied:
+          form-id: listSymRTCTopic
+      script: |
+        if (event.source.formValues.symRTCTopic == 'symRTCInstall') {
+            variables.content = 'Please click here to download the Symphony RTC Product Installation Guide: <a href="https://docs.developers.symphony.com">Symphony RTC Product Installation Guide</a>'
+        } else if (event.source.formValues.symRTCTopic == 'symCloudRecording') {
+            variables.content = 'Please click here to download the Symphony Cloud Compliance Recording Installation Guide: <a href="https://docs.developers.symphony.com">Symphony Cloud Compliance Recording Installation Guide</a>'
+        }
+
+  - send-message:
+      id: sendSymRTCReply
+      content: ${escape(variables.content)}
