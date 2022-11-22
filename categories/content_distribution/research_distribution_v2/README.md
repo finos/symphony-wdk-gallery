@@ -7,5 +7,8 @@ Only after approval is the content distributed to a list of client rooms for con
 - Set `approvalRoomId` to the stream id of the approval room
 - Populate `clientRoomIds` with the list of pre-defined client room stream ids
 
+### Run:
+`/research`
+
 ### Example
 ![Research Distribution V2](wdk-research-bot.gif)
