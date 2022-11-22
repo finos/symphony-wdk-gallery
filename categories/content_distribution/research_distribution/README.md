@@ -4,3 +4,6 @@ This is a 3-step workflow where research analysts can author and submit content 
 Requirements:
 - Set `approvalRoomId` to the stream id of the approval room
 - Populate `clientRoomIds` with the list of pre-defined client room stream ids
+
+### Run:
+`/research`
