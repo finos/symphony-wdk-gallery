@@ -1,0 +1,80 @@
+id: research-distribution-v2
+
+variables:
+  approvalRoomId: VpzdH89A92YIMCAEIZXHVn///nw36I5PdA==
+  clientRoomIds:
+    - O88WxKcYm8JU8AxDl6Fc+3///oKu0XE+dA==
+    - UbdVZk8R0PUU1lGXCFDAbX///nw36lmDdA==
+    - rWAn7JVRQ0aI1pmm/+M0W3///nw36aivdA==
+
+activities:
+  - execute-script:
+      id: setAuthor
+      on:
+        message-received:
+          content: /research
+      script: variables.authorStreamId = event.source.message.stream.streamId
+  - execute-script:
+      id: script
+      on:
+        one-of:
+          - activity-completed:
+              activity-id: setAuthor
+          - activity-completed:
+              activity-id: setApproval
+              if: ${variables.rejected != null}
+      script: |
+        if (variables.flag != null) {
+            variables.title = research.title
+            variables.content = research.content
+        }
+        
+        variables.flag = true
+  - send-message:
+      id: research
+      to:
+        stream-id: ${variables.authorStreamId}
+      content: |
+        <form id="research">
+        <h3>New Research Draft</h3>
+        ${variables.rejected}
+        <hr/>
+          <text-field name="title" placeholder="Title">${variables.title}</text-field>
+          <textarea name="content"  placeholder="Research Content">${variables.content}</textarea>
+          <hr/>
+          <button type="action" name="submit">Submit for Approval</button>
+        </form>
+  - send-message:
+  
+      id: approval
+      on:
+        form-replied:
+          form-id: research
+      to:
+        stream-id: ${variables.approvalRoomId}
+      content: |
+        <form id="approval">
+        <h3>Research Draft Approval</h3><br/>
+          <h4>${research.title}</h4><br/>
+          ${research.content}<br/>
+          <button name="approve" type="action">Approve</button>
+          <button name="reject" type="action">Reject</button>
+        </form>
+
+  - execute-script:
+      id: setApproval
+      on:
+        form-replied:
+          form-id: approval
+          exclusive: true
+      script: |
+        variables.rejected = approval.action == "approve" ? null : "Your draft was rejected - please update content and re-submit the form."
+        
+        //Build the content to be sent in next activity
+        variables.msg = '<h4>' + research.title + '</h4><br/>' + research.content 
+  - send-message:
+        id: distribute
+        if: ${approval.action == 'approve'}
+        to:
+          stream-ids: ${variables.clientRoomIds}
+        content: ${variables.msg} #get content from the variables

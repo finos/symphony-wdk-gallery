@@ -1,0 +1,49 @@
+id: text-to-ai-image
+activities:
+  - send-message:
+      id: textEntryForm
+      on:
+        message-received:
+          content: /textAI
+      content: |
+        <form id="textEntryForm">
+          <h1>Text to AI Image Generation Bot</h1>
+          <hr/>
+          <text-field name="textEntry" label="Enter Text for AI Image Generation"></text-field>
+          <hr/>
+          <button name="submit" type="action">Generate Image</button>
+          <button type="reset">Reset Text Entry</button>
+        </form>
+
+  - execute-request:
+      id: getImage
+      on:
+        form-replied:
+          form-id: textEntryForm
+          exclusive: true
+      method: POST
+      url: https://api.deepai.org/api/text2img
+      body:
+        text: ${textEntryForm.textEntry}
+      headers:
+        api-key: "quickstart-QUdJIGlzIGNvbWluZy4uLi4K"
+        Content-Type: "multipart/form-data"
+
+  - execute-script:
+      id: prepareImageForm
+      script: |
+        variables.success = getImage.outputs.status == 200
+        
+        if (variables.success) {
+            variables.message = '<messageML>Please find the Generated AI Image for ' + textEntryForm.textEntry + '<br/>'
+            variables.message += '<a href="' + getImage.outputs.body.output_url + '"/></messageML>'
+        } else {
+            variables.message = "<messageML>Sorry an unexpected error occurred. Please retry later.</messageML>"
+        }
+
+  - send-message:
+      id: generatedImageForm
+      on:
+        activity-completed:
+          activity-id: prepareImageForm
+      content: ${escape(variables.message)}
