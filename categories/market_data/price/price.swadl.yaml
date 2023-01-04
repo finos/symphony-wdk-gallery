@@ -1,0 +1,27 @@
+id: price
+variables:
+  uri: https://www.alphavantage.co/query?function=GLOBAL_QUOTE
+  token: TOKEN_HERE
+
+activities:
+- execute-request:
+    id: getPrice
+    on:
+      message-received:
+        content: /price \${ticker}
+    url: ${variables.uri}&apikey=${variables.token}&symbol=${event.args.ticker}
+
+- send-message:
+    id: report
+    content: |
+      <#assign data = ${getPrice.outputs.body['Global Quote']}>
+      <#if data['05. price']??>
+        <div style="display:flex"><table>
+          <tr><th>Symbol</th><td><cash tag="\${data['01. symbol']}" /></td></tr>
+          <tr><th>Price</th><td>\${data['05. price']} (\${data['10. change percent']})</td></tr>
+          <tr><th>Range</th><td>\${data['04. low']} - \${data['03. high']}</td></tr>
+          <tr><th>Volume</th><td>\${data['06. volume']}</td></tr>
+        </table></div>
+      <#else>
+        Unable to get price for <cash tag="${event.args.ticker}" />
+      </#if>
