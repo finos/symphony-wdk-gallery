@@ -1,0 +1,87 @@
+id: translate
+variables:
+  token: TOKEN_HERE
+  uri: https://translation.googleapis.com/language/translate/v2
+
+activities:
+- send-message:
+    id: init
+    on:
+      message-received:
+        id: context
+        content: translate {lang}
+    content: |
+      Translation between <b>${context.args.lang}</b> and <b>en</b> enabled.
+      Use <b><i>end translate</i></b> to disable.
+
+- debug:
+    on:
+      one-of:
+        - activity-completed:
+            activity-id: init
+        - activity-completed:
+            activity-id: callTranslate
+        - activity-completed:
+            activity-id: idle
+    object: ${event.args.eventName}
+
+- execute-script:
+    id: decider
+    on:
+      message-received:
+        id: translateEvent
+        content: "{text}"
+    script: |
+      variables.correctContext = (event.source.message.stream.streamId == context.source.message.stream.streamId)
+      variables.end = (translateEvent.args.text == 'end translate')
+
+- send-message:
+    id: end
+    on:
+      activity-completed:
+        activity-id: decider
+    if: ${variables.correctContext && variables.end}
+    content: Translation disabled
+
+- execute-request:
+    id: callDetect
+    on:
+      activity-completed:
+        activity-id: decider
+    if: ${variables.correctContext && !variables.end}
+    url: ${variables.uri}/detect
+    method: POST
+    headers:
+      "x-goog-api-key": ${variables.token}
+    body:
+      q: ${translateEvent.args.text}
+
+- execute-script:
+    id: direction
+    script: |
+      lang = callDetect.outputs.body.data.detections[0][0].language
+      variables.target = (lang == "en") ? context.args.lang : "en"
+
+- execute-request:
+    id: callTranslate
+    url: ${variables.uri}
+    method: POST
+    headers:
+      "x-goog-api-key": ${variables.token}
+    body:
+      q: ${translateEvent.args.text}
+      target: ${variables.target}
+
+- send-message:
+    id: sendTranslate
+    to:
+      stream-id: ${context.source.message.stream.streamId}
+    content: ${callTranslate.outputs.body.data.translations[0].translatedText}
+
+- execute-script:
+    id: idle
+    on:
+      activity-completed:
+        activity-id: decider
+    if: ${!variables.correctContext}
+    script: |
