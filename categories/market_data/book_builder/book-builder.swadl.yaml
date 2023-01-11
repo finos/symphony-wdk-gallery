@@ -1,0 +1,173 @@
+id: book-builder
+variables:
+  streams:
+    - stream_id_A
+    - stream_id_B
+    - stream_id_C
+    - stream_id_D
+
+activities:
+  - execute-script:
+      id: init
+      on:
+        one-of:
+          - message-received:
+              content: /build-book \${ticker} {amount}
+          - form-replied:
+              form-id: interest
+          - form-replied:
+              form-id: endExercise
+      script: |
+
+  - send-message:
+      id: blast
+      on:
+        activity-completed:
+          activity-id: init
+          if: ${event.args.eventName.indexOf('message') == 0}
+      to:
+        stream-ids: ${variables.streams}
+      content: |
+        <h3>Book Building Exercise</h3>
+        Please submit your interest for ${event.args.amount} units of <cash tag="${event.args.ticker}" />
+        <form id="interest">
+          <div style="display:none">
+            <text-field name="origin">${event.source.message.stream.streamId}</text-field>
+            <text-field name="ticker">${event.args.ticker}</text-field>
+          </div>
+          <text-field label="Amount" required="true" name="amount"
+            pattern="^\d+$" pattern-error-message="Invalid amount format" />
+          <text-field label="Price" required="true" name="price"
+            pattern="^[\d\.]+$" pattern-error-message="Invalid price format" />
+          <button name="submit">Submit</button>
+        </form>
+
+  - send-message:
+      id: initAck
+      content: Requests distributed
+
+  - execute-script:
+      id: setInitial
+      script: |
+        props = System.properties
+        props.requests = [ : ]
+        props.amount = Integer.parseInt(event.args.amount)
+        props['msgId-' + event.source.message.stream.streamId] = initAck.outputs.msgId
+        blast.outputs.messages.each { value ->
+          props.requests.put(value.stream.streamId, [ msgId: value.messageId, price: 0 ]) }
+
+  - update-message:
+      id: acknowledge
+      on:
+        activity-completed:
+          activity-id: init
+          if: ${event.args.eventName == 'form-reply_interest'}
+      message-id: ${event.source.formMessageId}
+      content: |
+        <h3>Book Building Exercise</h3>
+        Ticker: <cash tag="${interest.ticker}" /><br />
+        Requested: ${interest.amount} units @ $${interest.price}<br />
+
+  - execute-script:
+      id: processRequest
+      script: |
+        props = System.properties
+        entry = props.requests[event.source.stream.streamId]
+        entry.price = Float.parseFloat(interest.price)
+        entry.amount = Integer.parseInt(interest.amount)
+        entry.msgId = acknowledge.outputs.message.messageId
+        variables.requests = props.requests.sort { -it.value.price }
+        variables.messageId = props['msgId-' + interest.origin]
+
+  - update-message:
+      id: reportInterim
+      message-id: ${variables.messageId}
+      content: |
+        <h3>Book Building Exercise (In Progress)</h3>
+        <div style="display:flex"><table>
+        <tr><th>Stream</th><th>Requested</th><th style="padding-left:1rem">Price</th></tr>
+        <#list ${variables.requests} as stream, bid>
+          <#if bid.amount??>
+            <tr>
+              <td>\${stream}</td>
+              <td style="text-align:right">\${bid.amount}</td>
+              <td style="text-align:right;padding-left:1rem">$\${bid.price}</td>
+            </tr>
+          </#if>
+        </#list>
+        </table></div>
+        <form id="endExercise">
+          <div style="display:none"><text-field name="ticker">${interest.ticker}</text-field></div>
+          <button name="end">End Exercise</button>
+        </form>
+
+  - execute-script:
+      id: updateInterimMessageId
+      script: |
+        msg = reportInterim.outputs.message
+        System.properties['msgId-' + msg.stream.streamId] = msg.messageId
+
+  - execute-script:
+      id: processResults
+      on:
+        activity-completed:
+          activity-id: init
+          if: ${event.args.eventName == 'form-reply_endExercise'}
+      script: |
+        props = System.properties
+        props.requests = props.requests.sort { -it.value.price }
+        props.requests.values().findAll { it.amount }.each { value ->
+          value.allocation = (value.amount > props.amount) ? props.amount : value.amount
+          props.amount -= value.allocation
+        }
+        variables.requests = props.requests
+        variables.amount = props.amount
+        variables.streamIndex = 0
+        variables.stream = variables.streams[0]
+
+  - update-message:
+      id: reportFinal
+      message-id: ${event.source.formMessageId}
+      content: |
+        <h3>Book Building Exercise (Results)</h3>
+        <div style="display:flex"><table>
+        <tr><th>Stream</th><th>Requested</th><th>Allocated</th><th style="padding-left:1rem">Price</th></tr>
+        <#list ${variables.requests} as stream, bid>
+          <tr>
+            <td>\${stream}</td>
+            <td style="text-align:right">\${bid.amount!0}</td>
+            <td style="text-align:right">\${bid.allocation!0}</td>
+            <td style="text-align:right;padding-left:1rem">$\${bid.price}</td>
+          </tr>
+        </#list>
+        </table></div>
+        <#if ${variables.amount} gt 0>
+          <b>Unallocated Amount: ${variables.amount}</b>
+        <#else>
+          <b>Book Fully Allocated</b>
+        </#if>
+
+  - update-message:
+      id: reportStream
+      message-id: ${variables.requests[variables.stream].msgId}
+      on:
+        one-of:
+          - activity-completed:
+              activity-id: reportFinal
+          - activity-completed:
+              activity-id: nextStream
+              if: ${variables.streamIndex < variables.streams.size()}
+      content: |
+        <#assign data = ${variables.requests[variables.stream]}>
+        <h3>Book Building Exercise (Results)</h3>
+        <#if data.amount??>
+          Ticker: <cash tag="${endExercise.ticker}" /><br />
+          Requested: \${data.amount} units @ $\${data.price}<br />
+          Allocated: \${data.allocation} units
+        <#else>
+          Exercise ended without participaton
+        </#if>
+
+  - execute-script:
+      id: nextStream
+      script: variables.stream = variables.streams[++variables.streamIndex]
